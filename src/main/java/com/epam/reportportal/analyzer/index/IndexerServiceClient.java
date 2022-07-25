@@ -25,6 +25,13 @@ import java.util.List;
 public interface IndexerServiceClient {
 
 	/**
+	 * Remove launch by launch id form index
+	 * @param index Index to be cleaned
+	 * @param launchId Launch id to be deleted
+	 */
+	void removeLaunchIndex(Long index, Long launchId);
+
+	/**
 	 * Remove documents with specified ids from index
 	 *
 	 * @param index Index to be cleaned

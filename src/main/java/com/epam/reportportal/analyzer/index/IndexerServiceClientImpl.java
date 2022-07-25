@@ -3,6 +3,7 @@ package com.epam.reportportal.analyzer.index;
 import com.epam.reportportal.analyzer.RabbitMqManagementClient;
 import com.epam.reportportal.model.index.CleanIndexByDateRangeRq;
 import com.epam.reportportal.model.index.CleanIndexRq;
+import com.epam.reportportal.model.index.IndexLaunchRemove;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -11,6 +12,7 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.util.AbstractMap;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -24,6 +26,7 @@ import static com.epam.reportportal.analyzer.RabbitMqManagementClientTemplate.EX
 public class IndexerServiceClientImpl implements IndexerServiceClient {
 
 	private static final String CLEAN_ROUTE = "clean";
+	private static final String LAUNCH_REMOVE_ROUTE = "launch_remove";
 	private static final String CLEAN_BY_LOG_DATE_ROUTE = "remove_by_log_time";
 	private static final String CLEAN_BY_LAUNCH_DATE_ROUTE = "remove_by_launch_start_time";
 	private static final String EXCHANGE_NAME = "analyzer-default";
@@ -38,6 +41,15 @@ public class IndexerServiceClientImpl implements IndexerServiceClient {
 			@Qualifier("analyzerRabbitTemplate") RabbitTemplate rabbitTemplate) {
 		this.rabbitMqManagementClient = rabbitMqManagementClient;
 		this.rabbitTemplate = rabbitTemplate;
+	}
+
+	@Override
+	public void removeLaunchIndex(Long index, Long launchId) {
+		rabbitMqManagementClient.getAnalyzerExchangesInfo()
+				.forEach(exchange -> rabbitTemplate.convertAndSend(exchange.getName(),
+						LAUNCH_REMOVE_ROUTE,
+						new IndexLaunchRemove(index, Collections.singletonList(launchId))
+				));
 	}
 
 	@Override
