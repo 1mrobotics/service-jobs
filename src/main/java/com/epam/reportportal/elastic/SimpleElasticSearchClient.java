@@ -5,9 +5,7 @@ import org.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.HttpEntity;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.MediaType;
+import org.springframework.http.*;
 import org.springframework.http.client.support.BasicAuthenticationInterceptor;
 import org.springframework.stereotype.Service;
 import org.springframework.util.CollectionUtils;
@@ -67,7 +65,10 @@ public class SimpleElasticSearchClient {
         });
 
         logsByIndex.forEach((indexName, body) -> {
-            restTemplate.put(host + "/" + indexName + "/_bulk?refresh", getStringHttpEntity(body));
+            ResponseEntity<String> result = restTemplate.exchange(
+                    host + "/" + indexName + "/_bulk?refresh",
+                    HttpMethod.PUT, getStringHttpEntity(body), String.class);
+            LOGGER.debug("PUT ES: " + result.getStatusCode() + "| " + result.getBody());
         });
     }
 
