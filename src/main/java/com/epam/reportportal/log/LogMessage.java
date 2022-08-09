@@ -1,17 +1,28 @@
 package com.epam.reportportal.log;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 import java.io.Serializable;
 import java.time.LocalDateTime;
 import java.util.Objects;
 
 public class LogMessage implements Serializable {
 
+    @JsonProperty
     private Long id;
+    @JsonProperty("@timestamp")
     private LocalDateTime logTime;
+    @JsonProperty("message")
     private String logMessage;
+    @JsonProperty
     private Long itemId;
+    @JsonProperty
     private Long launchId;
+    @JsonProperty
     private Long projectId;
+
+    public LogMessage() {
+    }
 
     public LogMessage(Long id, LocalDateTime logTime, String logMessage, Long itemId, Long launchId, Long projectId) {
         this.id = id;
@@ -83,5 +94,11 @@ public class LogMessage implements Serializable {
     @Override
     public int hashCode() {
         return Objects.hash(id, logTime, logMessage, itemId, launchId, projectId);
+    }
+
+    @Override
+    public String toString() {
+        return "LogMessage{" + "id=" + id + ", logTime=" + logTime + ", logMessage='" + logMessage + '\'' + ", itemId=" + itemId
+                + ", launchId=" + launchId + ", projectId=" + projectId + '}';
     }
 }

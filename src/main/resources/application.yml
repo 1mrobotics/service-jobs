@@ -3,6 +3,9 @@ rp:
     variable:
       elements-counter:
         batch-size: 50
+      migrate:
+        log:
+          cron: '0 */2 * * * *'
       clean:
         storage:
           ## 30 seconds
@@ -10,7 +13,7 @@ rp:
           chunkSize: 1000
         attachment:
           ## 2 minutes
-          cron: '0 */2 * * * *'
+          cron: '0 */5 * * * *'
         log:
           ## 5 minutes
           cron: '0 */5 * * * *'
@@ -33,10 +36,10 @@ rp:
             project:
               core: 5
               max: 10
-  elasticsearch:
-    host: http://elasticsearch:9200
-    username:
-    password:
+#  elasticsearch:
+#    host: http://elasticsearch:9200
+#    username: elastic
+#    password: elastic1q2w3e
 
   processing:
     log:
@@ -54,10 +57,10 @@ rp:
   db:
     url: jdbc:postgresql://${rp.db.host}:${rp.db.port}/${rp.db.name}
     name: reportportal
-    host: postgres
+    host: localhost
     port: 5432
-    user:
-    pass:
+    user: rpuser
+    pass: rppass
 
   amqp:
     addresses: amqp://${rp.amqp.user}:${rp.amqp.pass}@${rp.amqp.host}:${rp.amqp.port}
@@ -66,8 +69,8 @@ rp:
     analyzer-vhost: analyzer
     host: rabbitmq
     port: 5672
-    user:
-    pass:
+    user: rabbitmq
+    pass: rabbitmq
     apiport: 15672
     apiuser:
     apipass:
