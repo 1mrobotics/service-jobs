@@ -6,10 +6,6 @@ import com.epam.reportportal.model.SearchResponse;
 import jakarta.json.Json;
 import jakarta.json.JsonObject;
 import jakarta.json.JsonValue;
-import org.apache.http.auth.AuthScope;
-import org.apache.http.auth.UsernamePasswordCredentials;
-import org.apache.http.client.CredentialsProvider;
-import org.apache.http.impl.client.BasicCredentialsProvider;
 import org.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -59,10 +55,9 @@ public class SimpleElasticSearchClient {
 		restTemplate.postForObject(host + "/" + indexName + "/_doc", request, String.class);
 	}
 
+
 	public void save(List<LogMessage> logMessageList) {
-		if (CollectionUtils.isEmpty(logMessageList)) {
-			return;
-		}
+		if (CollectionUtils.isEmpty(logMessageList)) return;
 		Map<String, String> logsByIndex = new HashMap<>();
 
 		String create = "{\"create\":{ }}\n";
@@ -78,12 +73,26 @@ public class SimpleElasticSearchClient {
 			}
 		});
 
-		ExecutorService executorService = Executors.newCachedThreadPool();
 		logsByIndex.forEach((indexName, body) -> {
-			executorService.execute(() -> {
-				restTemplate.put(host + "/" + indexName + "/_bulk?refresh", getStringHttpEntity(body));
-			});
+			restTemplate.put(host + "/" + indexName + "/_bulk?refresh", getStringHttpEntity(body));
 		});
+	}
+
+	public void save(Map<Long, List<LogMessage>> logMessageMap) {
+		if (CollectionUtils.isEmpty(logMessageMap)) {
+			return;
+		}
+		String create = "{\"create\":{ }}\n";
+
+		logMessageMap.forEach((launchId, logMessageList) -> {
+			String indexName = "logs-reportportal-" + logMessageList.get(0).getProjectId() + "-" + launchId;
+			StringBuilder jsonBodyBuilder = new StringBuilder();
+			for (LogMessage logMessage : logMessageList){
+				jsonBodyBuilder.append(create).append(convertToJson(logMessage)).append("\n");
+			}
+			restTemplate.put(host + "/" + indexName + "/_bulk?refresh", getStringHttpEntity(jsonBodyBuilder.toString()));
+		});
+
 	}
 
 	public Optional<LogMessage> getLastLogFromElasticSearch() {
