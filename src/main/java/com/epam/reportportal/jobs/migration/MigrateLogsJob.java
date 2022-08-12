@@ -57,12 +57,13 @@ public class MigrateLogsJob extends BaseJob {
 			migrateAllLogs();
 			return;
 		}
-		LOGGER.info("Last log from Postgres : {}", lastLogFromElastic.get());
-		if (lastLogFromElastic.get().getLogTime() == null) {
+		LOGGER.info("Last log from Elastic : {}", lastLogFromElastic.get());
+		LocalDateTime elasticLastLogTime = lastLogFromElastic.get().getLogTime();
+		if (elasticLastLogTime == null) {
 			migrateAllLogs();
 			return;
 		}
-		int comparisonResult = lastLogTime.compareTo(lastLogFromElastic.get().getLogTime());
+		int comparisonResult = lastLogTime.compareTo(elasticLastLogTime);
 		if (comparisonResult == 0) {
 			LOGGER.info("Elastic has the same logs as Postgres");
 			logFinish();
@@ -71,14 +72,14 @@ public class MigrateLogsJob extends BaseJob {
 			elasticSearchClient.deleteLogsAfterDate(lastLogTime);
 			logFinish();
 		} else {
-			migrateLogsAfterDate(lastLogTime);
+			migrateLogsAfterDate(elasticLastLogTime);
 		}
 	}
 
 	private void migrateAllLogs() {
 		LOGGER.info("Migrating all logs from Postgres");
 		List<LogMessage> logMessageWithLaunchIdList = jdbcTemplate.query(SELECT_ALL_LOGS_WITH_LAUNCH_ID, new LogRowMapper());
-		List<Long> launchIds = logMessageWithLaunchIdList.stream().map(LogMessage::getLaunchId).collect(Collectors.toList());
+		List<Long> launchIds = logMessageWithLaunchIdList.stream().map(LogMessage::getLaunchId).distinct().collect(Collectors.toList());
 		List<LogMessage> logMessageWithoutLaunchIdList = namedParameterJdbcTemplate.query(SELECT_ALL_LOGS_WITHOUT_LAUNCH_ID,
 				Map.of("ids", launchIds),
 				new LogRowMapper()
@@ -90,7 +91,7 @@ public class MigrateLogsJob extends BaseJob {
 	private void migrateLogsAfterDate(LocalDateTime date) {
 		LOGGER.info("Migrating logs after {}", date);
 		List<LogMessage> logMessageWithLaunchIdList = jdbcTemplate.query(SELECT_LOGS_WITH_LAUNCH_ID_AFTER_DATE, new LogRowMapper(), date);
-		List<Long> launchIds = logMessageWithLaunchIdList.stream().map(LogMessage::getLaunchId).collect(Collectors.toList());
+		List<Long> launchIds = logMessageWithLaunchIdList.stream().map(LogMessage::getLaunchId).distinct().collect(Collectors.toList());
 		List<LogMessage> logMessageWithoutLaunchIdList = namedParameterJdbcTemplate.query(SELECT_LOGS_WITHOUT_LAUNCH_ID_AFTER_DATE,
 				Map.of("ids", launchIds, "time", date),
 				new LogRowMapper()
