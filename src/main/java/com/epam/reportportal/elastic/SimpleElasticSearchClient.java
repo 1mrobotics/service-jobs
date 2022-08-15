@@ -53,9 +53,10 @@ public class SimpleElasticSearchClient {
 		restTemplate.postForObject(host + "/" + indexName + "/_doc", request, String.class);
 	}
 
-
 	public void save(List<LogMessage> logMessageList) {
-		if (CollectionUtils.isEmpty(logMessageList)) return;
+		if (CollectionUtils.isEmpty(logMessageList)) {
+			return;
+		}
 		Map<String, String> logsByIndex = new HashMap<>();
 
 		String create = "{\"create\":{ }}\n";
@@ -85,7 +86,7 @@ public class SimpleElasticSearchClient {
 		logMessageMap.forEach((launchId, logMessageList) -> {
 			String indexName = "logs-reportportal-" + logMessageList.get(0).getProjectId() + "-" + launchId;
 			StringBuilder jsonBodyBuilder = new StringBuilder();
-			for (LogMessage logMessage : logMessageList){
+			for (LogMessage logMessage : logMessageList) {
 				jsonBodyBuilder.append(create).append(convertToJson(logMessage)).append("\n");
 			}
 			restTemplate.put(host + "/" + indexName + "/_bulk?refresh", getStringHttpEntity(jsonBodyBuilder.toString()));
@@ -114,7 +115,11 @@ public class SimpleElasticSearchClient {
 
 	public void deleteLogsAfterDate(LocalDateTime localDateTime) {
 		JsonObject deleteQueryObject = prepareDeleteQueryObject(localDateTime);
-		restTemplate.postForObject(host + "/.ds-logs-reportportal*/_delete_by_query", getStringHttpEntity(deleteQueryObject.toString()), DeleteResponse.class);
+		restTemplate.postForObject(
+				host + "/.ds-logs-reportportal*/_delete_by_query",
+				getStringHttpEntity(deleteQueryObject.toString()),
+				DeleteResponse.class
+		);
 	}
 
 	public void deleteStreamByLaunchIdAndProjectId(Long launchId, Long projectId) {
@@ -156,16 +161,8 @@ public class SimpleElasticSearchClient {
 	}
 
 	private JsonObject prepareDeleteQueryObject(LocalDateTime localDateTime) {
-		return Json.createObjectBuilder()
-				.add(
-						"query",
-						Json.createObjectBuilder()
-								.add(
-										"range",
-										Json.createObjectBuilder()
-												.add("@timestamp", Json.createObjectBuilder().add("gte", localDateTime.toString()))
-								)
-				)
-				.build();
+		return Json.createObjectBuilder().add("query", Json.createObjectBuilder().add("range",
+				Json.createObjectBuilder().add("@timestamp", Json.createObjectBuilder().add("gte", localDateTime.toString()))
+		)).build();
 	}
 }
