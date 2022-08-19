@@ -3,9 +3,6 @@ package com.epam.reportportal.elastic;
 import com.epam.reportportal.log.LogMessage;
 import com.epam.reportportal.model.DeleteResponse;
 import com.epam.reportportal.model.SearchResponse;
-import jakarta.json.Json;
-import jakarta.json.JsonObject;
-import jakarta.json.JsonValue;
 import org.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -18,7 +15,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.CollectionUtils;
 import org.springframework.web.client.RestTemplate;
 
-import java.time.LocalDateTime;
 import java.util.*;
 
 /**
@@ -30,6 +26,8 @@ import java.util.*;
 public class SimpleElasticSearchClient {
 
 	protected final Logger LOGGER = LoggerFactory.getLogger(SimpleElasticSearchClient.class);
+
+	private final static String SEARCH_QUERY_JSON = "{\"query\":{\"match_all\":{}},\"size\":1,\"sort\":[{\"@timestamp\":{\"order\":\"asc\"}}]}";
 
 	private final String host;
 	private final RestTemplate restTemplate;
@@ -72,18 +70,16 @@ public class SimpleElasticSearchClient {
 			}
 		});
 
-		logsByIndex.forEach((indexName, body) -> {
-			restTemplate.put(host + "/" + indexName + "/_bulk?refresh", getStringHttpEntity(body));
-		});
+		logsByIndex.forEach((indexName, body) -> restTemplate.put(host + "/" + indexName + "/_bulk?refresh", getStringHttpEntity(body)));
 	}
 
-	public void save(Map<Long, List<LogMessage>> logMessageMap) {
+	public void save(TreeMap<Long, List<LogMessage>> logMessageMap) {
 		if (CollectionUtils.isEmpty(logMessageMap)) {
 			return;
 		}
 		String create = "{\"create\":{ }}\n";
 
-		logMessageMap.forEach((launchId, logMessageList) -> {
+		logMessageMap.descendingMap().forEach((launchId, logMessageList) -> {
 			String indexName = "logs-reportportal-" + logMessageList.get(0).getProjectId() + "-" + launchId;
 			StringBuilder jsonBodyBuilder = new StringBuilder();
 			for (LogMessage logMessage : logMessageList) {
@@ -91,17 +87,12 @@ public class SimpleElasticSearchClient {
 			}
 			restTemplate.put(host + "/" + indexName + "/_bulk?refresh", getStringHttpEntity(jsonBodyBuilder.toString()));
 		});
-
 	}
 
-	public Optional<LogMessage> getLastLogFromElasticSearch() {
-		JsonObject searchObject = prepareSearchObject();
-
-		LOGGER.info("Search object body : {}", searchObject.toString());
-		LOGGER.info("URI : {}", host + "/_search");
+	public Optional<LogMessage> getFirstLogFromElasticSearch() {
 
 		SearchResponse searchResponse = restTemplate.postForObject(host + "/_search",
-				getStringHttpEntity(searchObject.toString()),
+				getStringHttpEntity(SEARCH_QUERY_JSON),
 				SearchResponse.class
 		);
 
@@ -111,15 +102,6 @@ public class SimpleElasticSearchClient {
 		}
 
 		return Optional.empty();
-	}
-
-	public void deleteLogsAfterDate(LocalDateTime localDateTime) {
-		JsonObject deleteQueryObject = prepareDeleteQueryObject(localDateTime);
-		restTemplate.postForObject(
-				host + "/.ds-logs-reportportal*/_delete_by_query",
-				getStringHttpEntity(deleteQueryObject.toString()),
-				DeleteResponse.class
-		);
 	}
 
 	public void deleteStreamByLaunchIdAndProjectId(Long launchId, Long projectId) {
@@ -149,20 +131,4 @@ public class SimpleElasticSearchClient {
 		return new HttpEntity<>(body, headers);
 	}
 
-	private JsonObject prepareSearchObject() {
-		return Json.createObjectBuilder()
-				.add("query", Json.createObjectBuilder().add("match_all", JsonValue.EMPTY_JSON_OBJECT))
-				.add("size", 1)
-				.add("sort",
-						Json.createArrayBuilder()
-								.add(Json.createObjectBuilder().add("@timestamp", Json.createObjectBuilder().add("order", "desc")))
-				)
-				.build();
-	}
-
-	private JsonObject prepareDeleteQueryObject(LocalDateTime localDateTime) {
-		return Json.createObjectBuilder().add("query", Json.createObjectBuilder().add("range",
-				Json.createObjectBuilder().add("@timestamp", Json.createObjectBuilder().add("gte", localDateTime.toString()))
-		)).build();
-	}
 }
